@@ -7,19 +7,18 @@ on:
 jobs:
   update-and-deploy:
     runs-on: self-hosted
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Update image tag
         run: |
           sed -i "s|demo-app:.*|demo-app:${{ github.event.client_payload.image_tag }}|g" dev/deployment.yml
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
+          git remote set-url origin https://nischai-mu:${{ secrets.PAT_TOKEN }}@github.com/nischai-mu/argocd-cd-pipeline.git
           git add dev/deployment.yml
           git commit -m "cd: update image tag to ${{ github.event.client_payload.image_tag }}"
           git push origin main
