@@ -1,0 +1,26 @@
+name: CD Pipeline
+
+on:
+  repository_dispatch:
+    types: [deploy]
+
+jobs:
+  update-and-deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Update image tag
+        run: |
+          sed -i "s|demo-app:.*|demo-app:${{ github.event.client_payload.image_tag }}|g" dev/deployment.yml
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add dev/deployment.yml
+          git commit -m "cd: update image tag to ${{ github.event.client_payload.image_tag }}"
+          git push origin main
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f dev/deployment.yml
+          kubectl apply -f dev/service.yml
