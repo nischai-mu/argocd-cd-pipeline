@@ -23,6 +23,14 @@ jobs:
           git commit -m "cd: update image tag to ${{ github.event.client_payload.image_tag }}"
           git push origin main
 
+      - name: Refresh ECR secret
+        run: |
+           kubectl delete secret ecr-secret --ignore-not-found
+           kubectl create secret docker-registry ecr-secret \
+             --docker-server=949185033669.dkr.ecr.us-east-1.amazonaws.com \
+             --docker-username=AWS \
+             --docker-password=$(aws ecr get-login-password --region us-east-1)
+
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f application.yml
