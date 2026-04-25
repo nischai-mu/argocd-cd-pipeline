@@ -16,7 +16,7 @@ spec:
         - name: ecr-secret   # 👈 ADD THIS
       containers:
       - name: as13-cont
-        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:43
+        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:44
         ports:
         - containerPort: 3000
 
