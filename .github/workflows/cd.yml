@@ -7,32 +7,65 @@ on:
 jobs:
   update-and-deploy:
     runs-on: self-hosted
+
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
+      # 2️⃣ Update image tag in deployment.yml
       - name: Update image tag
         run: |
-          sed -i "s|demo-app:.*|demo-app:${{ github.event.client_payload.image_tag }}|g" dev/deployment.yml
+          sed -i "s|demo-app:[^ ]*|demo-app:${{ github.event.client_payload.image_tag }}|g" dev/deployment.yml
+
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
+
           git remote set-url origin https://nischai-mu:${{ secrets.PAT_TOKEN }}@github.com/nischai-mu/argocd-cd-pipeline.git
+
           git add dev/deployment.yml
-          git commit -m "cd: update image tag to ${{ github.event.client_payload.image_tag }}"
+          git commit -m "cd: update image tag to ${{ github.event.client_payload.image_tag }}" || echo "No changes to commit"
           git push origin main
 
+      # 3️⃣ Fix ECR secret (CRITICAL)
       - name: Refresh ECR secret
         run: |
-           kubectl delete secret ecr-secret --ignore-not-found
-           kubectl create secret docker-registry ecr-secret \
-             --docker-server=949185033669.dkr.ecr.us-east-1.amazonaws.com \
-             --docker-username=AWS \
-             --docker-password=$(aws ecr get-login-password --region us-east-1)
+          kubectl delete secret ecr-secret -n as13-myapp --ignore-not-found
 
-      - name: Deploy to Kubernetes
+          kubectl create secret docker-registry ecr-secret \
+            --docker-server=949185033669.dkr.ecr.us-east-1.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password=$(aws ecr get-login-password --region us-east-1) \
+            -n as13-myapp
+
+      # 4️⃣ Apply manifests
+      - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f application.yml 
           kubectl apply -f dev/deployment.yml -n as13-myapp
           kubectl apply -f dev/service.yml -n as13-myapp
+
+      # 5️⃣ Force rollout (VERY IMPORTANT)
+      - name: Restart Deployment
+        run: |
+          kubectl rollout restart deployment as13-app -n as13-myapp
+
+      # 6️⃣ Wait for rollout to complete
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment as13-app -n as13-myapp
+
+      # 7️⃣ Hard cleanup (failsafe)
+      - name: Delete old pods (failsafe)
+        run: |
+          kubectl delete pod -l app=myapp1 -n as13-myapp --ignore-not-found
+
+      # 8️⃣ Debug / Verification (IMPORTANT)
+      - name: Verify deployment
+        run: |
+          echo "===== PODS ====="
+          kubectl get pods -n as13-myapp -o wide
+
+          echo "===== IMAGES ====="
+          kubectl describe pods -n as13-myapp | grep Image
