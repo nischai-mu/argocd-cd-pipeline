@@ -16,7 +16,7 @@ spec:
         - name: ecr-secret
       containers:
       - name: leaderboard
-        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:58
+        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:59
         ports:
         - containerPort: 3000
         env:
