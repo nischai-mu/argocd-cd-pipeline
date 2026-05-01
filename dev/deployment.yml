@@ -1,22 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: as13-app
+  name: leaderboard-app
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: myapp1
-  replicas: 1
+      app: leaderboard
   template:
     metadata:
       labels:
-        app: myapp1
+        app: leaderboard
     spec:
       imagePullSecrets:
-        - name: ecr-secret   # 👈 ADD THIS
+        - name: ecr-secret
       containers:
-      - name: as13-cont
-        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:56
+      - name: leaderboard
+        image: 949185033669.dkr.ecr.us-east-1.amazonaws.com/demo-app:latest
         ports:
         - containerPort: 3000
-
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-uri
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboard-service
+spec:
+  type: NodePort
+  selector:
+    app: leaderboard
+  ports:
+  - port: 80
+    targetPort: 3000
+    nodePort: 30008
