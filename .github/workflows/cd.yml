@@ -43,8 +43,11 @@ jobs:
       # 4️⃣ Apply manifests
       - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f dev/deployment.yml -n as13-myapp
-          kubectl apply -f dev/service.yml -n as13-myapp
+           kubectl apply -f dev/mongo-secret.yml -n as13-myapp
+           kubectl apply -f dev/mongo-deployment.yml -n as13-myapp
+           kubectl apply -f dev/deployment.yml -n as13-myapp
+           kubectl apply -f dev/service.yml -n as13-myapp
+           kubectl apply -f application.yml
 
       # 5️⃣ Force rollout (VERY IMPORTANT)
       - name: Restart Deployment
